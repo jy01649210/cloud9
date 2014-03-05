@@ -115,8 +115,34 @@ module.exports = ext.register("ext/openfiles/openfiles", {
         ide.addEventListener("closefile", $close);
         tabEditors.addEventListener("close", $close);
 
+        ide.addEventListener("afterfilesave", function(e){
+            var path = util.escapeXpathString(e.oldpath || "");
+
+            var node = model.queryNode('//node()[@path=' + path + ']');
+
+            if (!node || !node.parentNode || node.beingRemoved)
+                return;
+
+            if (ide.inited && _self.inited && lstOpenFiles.$ext.offsetWidth) {
+                node.beingRemoved = true;
+                _self.animateRemove(node);
+            }
+            else
+                model.removeXml(node);
+        });
+
         ide.addEventListener("updatefile", function(e){
             var node = e.xmlNode;
+
+            if (node) {
+                if (!model.queryNode('//node()[@path=' + util.escapeXpathString(node.getAttribute("path")) + ']')) {
+                    var xmlNode = model.appendXml(apf.getCleanCopy(node));
+
+                    if (ide.inited && _self.inited && lstOpenFiles.$ext.offsetWidth) {
+                        _self.animateAdd(xmlNode);
+                    }
+                }
+            }
 
             if (!self.trFiles)
                 return;
